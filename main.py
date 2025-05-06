@@ -23,15 +23,16 @@ def get_EQ_data(start, end):
 
     response = requests.get(URL_ENDPOINT, params=parameters)
     response_data = response.json()
-    extracted_data = [
-        (
-            data['id'],
-            data['geometry']['coordinates'],
-            datetime.datetime.fromtimestamp(data['properties']['time'] / 1000, datetime.UTC).strftime("%d-%m-%Y"),
-            data['properties']['title']
-        )
+    extracted_data = {
+        data['id']: {
+            'coordinates': data['geometry']['coordinates'],
+            'date': datetime.datetime.fromtimestamp(data['properties']['time'] / 1000, datetime.UTC).strftime(
+                "%d-%m-%Y"),
+            'title': data['properties']['title'],
+        }
         for data in response_data['features']
-    ]
+    }
+
     if response.status_code == 200:
         return extracted_data
     else:
