@@ -9,29 +9,40 @@ import datetime
 # 1 API DATA --------------------------------------------------------
 import requests
 
-URL_ENDPOINT = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
-parameters = {
-    'format': 'geojson',
-    'starttime': '2014-01-01',
-    'endtime': '2014-01-02',
-}
-
-response = requests.get(URL_ENDPOINT, params=parameters)
-response_data = response.json()
-extracted_data = [
-    (
-        data['id'],
-        data['geometry']['coordinates'],
-        datetime.datetime.fromtimestamp(data['properties']['time'] / 1000, datetime.UTC).strftime("%d-%m-%Y"),
-        data['properties']['title']
-    )
-    for data in response_data['features']
-]
-if response.status_code == 200:
-    for item in extracted_data:
-        print(item)
+start_date = '2014-01-01'
+end_date = '2014-01-02'
 
 
+def get_EQ_data(start, end):
+    URL_ENDPOINT = 'https://earthquake.usgs.gov/fdsnws/event/1/query'
+    parameters = {
+        'format': 'geojson',
+        'starttime': start,
+        'endtime': end,
+    }
+
+    response = requests.get(URL_ENDPOINT, params=parameters)
+    response_data = response.json()
+    extracted_data = [
+        (
+            data['id'],
+            data['geometry']['coordinates'],
+            datetime.datetime.fromtimestamp(data['properties']['time'] / 1000, datetime.UTC).strftime("%d-%m-%Y"),
+            data['properties']['title']
+        )
+        for data in response_data['features']
+    ]
+    if response.status_code == 200:
+        return extracted_data
+    else:
+        return response.status_code
+
+
+retrieved_data = get_EQ_data(start_date, end_date)
+for item in retrieved_data:
+    print(item)
+
+# 1.1 Save in JSON file --------------------------------------------------------
 
 
 # 3 WEBAPP --------------------------------------------------------
