@@ -1,5 +1,7 @@
 from flask import Flask
 import datetime
+import pprint
+import json
 
 # TODO 1) Get the data from https://earthquake.usgs.gov/fdsnws/event/1/ - Submit on UDEMY
 # TODO 1.1) Save in a JSON file to be able to work Offline
@@ -40,10 +42,17 @@ def get_EQ_data(start, end):
 
 
 retrieved_data = get_EQ_data(start_date, end_date)
-for item in retrieved_data:
-    print(item)
+pprint.pprint(retrieved_data)  # Method to print dict nicely
 
 # 1.1 Save in JSON file --------------------------------------------------------
+json_object = json.dumps(retrieved_data)
+
+with open("data.json", "w") as outfile:
+    outfile.write(json_object)
+
+# 2 Creating the Shapefile with Qgis --------------------------------------------------------
+
+
 
 
 # 3 WEBAPP --------------------------------------------------------
