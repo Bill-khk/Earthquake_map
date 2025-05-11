@@ -41,17 +41,34 @@ def get_EQ_data(start, end):
         return response.status_code
 
 
-retrieved_data = get_EQ_data(start_date, end_date)
-pprint.pprint(retrieved_data)  # Method to print dict nicely
-
-# 1.1 Save in JSON file --------------------------------------------------------
-json_object = json.dumps(retrieved_data)
-
-with open("data.json", "w") as outfile:
-    outfile.write(json_object)
+# retrieved_data = get_EQ_data(start_date, end_date)
+# pprint.pprint(retrieved_data)  # Method to print dict nicely
+#
+# # 1.1 Save in JSON file --------------------------------------------------------
+# json_object = json.dumps(retrieved_data)
+#
+# with open("data.json", "w") as outfile:
+#     outfile.write(json_object)
 
 # 2 Creating the Shapefile with Qgis --------------------------------------------------------
 
+import sys
+import os
+
+# QGIS_PREFIX_PATH = 'C:/Program Files/QGIS/apps/qgis-ltr'  # Adjust this for your installation
+# os.environ['QGIS_PREFIX_PATH'] = QGIS_PREFIX_PATH
+# sys.path.append(os.path.join(QGIS_PREFIX_PATH, 'python'))
+
+from qgis.core import QgsApplication, QgsProject
+
+# App initialization
+QGIS_PATH = 'C:/Program Files/QGIS/bin'
+QgsApplication.setPrefixPath(QGIS_PATH, True)
+qgs = QgsApplication([], False)
+qgs.initQgis()
+print("QGIS Initialized")
+
+#
 
 
 
