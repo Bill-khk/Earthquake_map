@@ -41,36 +41,81 @@ def get_EQ_data(start, end):
         return response.status_code
 
 
-# retrieved_data = get_EQ_data(start_date, end_date)
-# pprint.pprint(retrieved_data)  # Method to print dict nicely
-#
-# # 1.1 Save in JSON file --------------------------------------------------------
-# json_object = json.dumps(retrieved_data)
-#
-# with open("data.json", "w") as outfile:
-#     outfile.write(json_object)
+retrieved_data = get_EQ_data(start_date, end_date)
+
+pprint.pprint(retrieved_data)  # Method to print dict nicely
+
+
+# 1.1 Save in JSON file --------------------------------------------------------
+def json_saving(data, filename):
+    json_object = json.dumps(data)
+
+    with open(f'EQdata/{filename}', "w") as outfile:
+        outfile.write(json_object)
+
+
+# json_saving(retrieved_data, "data.json")
+
+# 1.2 Save in CSV file --------------------------------------------------------
+
+import pandas as pd
+
+
+def export_data(data, option=1):
+    df = pd.DataFrame.from_dict(data, orient='index')  # Index put each dict value as a row
+    df = df.reset_index().rename(columns={'index': 'id'})  # And name the key 'id'
+
+    # Convert tuple coordinate into three column and drop the old one
+    df[['longitude', 'latitude', 'depth']] = pd.DataFrame(df['coordinates'].tolist(), index=df.index)
+    df.drop(columns='coordinates', inplace=True)
+
+    # Save into csv
+    if option == 1:
+        df.to_csv("EQdata/data.csv", index_label='id')
+    else:
+        df.to_xml("EQdata/data.xml", index=False, root_name="Earthquakes", row_name="Event")
+
+
+export_data(retrieved_data)
 
 # 2 Creating the Shapefile with Qgis --------------------------------------------------------
 
 import sys
 import os
-
 # QGIS_PREFIX_PATH = 'C:/Program Files/QGIS/apps/qgis-ltr'  # Adjust this for your installation
 # os.environ['QGIS_PREFIX_PATH'] = QGIS_PREFIX_PATH
 # sys.path.append(os.path.join(QGIS_PREFIX_PATH, 'python'))
 
-from qgis.core import QgsApplication, QgsProject
-
-# App initialization
-QGIS_PATH = 'C:/Program Files/QGIS/bin'
-QgsApplication.setPrefixPath(QGIS_PATH, True)
-qgs = QgsApplication([], False)
-qgs.initQgis()
-print("QGIS Initialized")
-
-#
+from qgis.core import QgsApplication, QgsProject, QgsVectorLayer
 
 
+def Qgis_processing():
+    # App initialization
+    QGIS_PATH = 'C:/Program Files/QGIS/bin'
+    QgsApplication.setPrefixPath(QGIS_PATH, True)
+    qgs = QgsApplication([], False)
+    qgs.initQgis()
+    print("QGIS Initialized --------------")
+
+    project = QgsProject.instance()  # App instance initialization
+    project.read('geodata/Base.qgz')  # Opening project
+
+    # Loading countries shp file
+    uri = "geodata/ne_110m_admin_0_countries.shp"
+    vLayer = QgsVectorLayer(uri, "Countries", "ogr")
+    QgsProject.instance().addMapLayer(vLayer)
+    # project.write()
+
+    # TODO correct URI to make the layer valid in QGIS
+    uri = "EQdata/data.csv?&yField=latitude&xField=longitude&zField=depth"
+    vLayer = QgsVectorLayer(uri, "EQ_data", "ogr")
+    QgsProject.instance().addMapLayer(vLayer)
+
+    print('Layers added --------------')
+    project.write('geodata/Processing_project.qgs')
+
+
+Qgis_processing()
 
 # 3 WEBAPP --------------------------------------------------------
 # app = Flask(__name__)
