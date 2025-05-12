@@ -71,7 +71,7 @@ def export_data(data, option=1):
 
     # Save into csv
     if option == 1:
-        df.to_csv("EQdata/data.csv", index_label='id')
+        df.to_csv("EQdata/data.csv", index_label='id', sep=';')
     else:
         df.to_xml("EQdata/data.xml", index=False, root_name="Earthquakes", row_name="Event")
 
@@ -107,10 +107,10 @@ def Qgis_processing():
     # project.write()
 
     # TODO correct URI to make the layer valid in QGIS
-    uri = "EQdata/data.csv?&yField=latitude&xField=longitude&zField=depth"
-    vLayer = QgsVectorLayer(uri, "EQ_data", "ogr")
+    uri = ("file:///C:/Users/billk/OneDrive/Documents/6 - Pycharm Projects/Earthquake_map/EQdata/data.csv"
+           "?delimiter=;&xField=longitude&yField=latitude")
+    vLayer = QgsVectorLayer(uri, "EQ_data", "delimitedtext")
     QgsProject.instance().addMapLayer(vLayer)
-
     print('Layers added --------------')
     project.write('geodata/Processing_project.qgs')
 
