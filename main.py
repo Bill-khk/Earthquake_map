@@ -2,9 +2,10 @@ from flask import Flask
 import datetime
 import pprint
 import json
+import math
 
-# TODO 1) Get the data from https://earthquake.usgs.gov/fdsnws/event/1/ - Submit on UDEMY
-# TODO 1.1) Save in a JSON file to be able to work Offline
+# 1) Get the data from https://earthquake.usgs.gov/fdsnws/event/1/ - Submit on UDEMY
+# 1.1) Save in a JSON file to be able to work Offline
 # TODO 2) Create a shapefile from QGIS using PyQGIS - https://docs.qgis.org/3.40/en/docs/pyqgis_developer_cookbook/index.html
 # TODO 3) Create a webserver that interact with the data and update the display
 
@@ -13,6 +14,13 @@ import requests
 
 start_date = '2014-01-01'
 end_date = '2014-01-02'
+
+
+def felt_radius(M, D):  # With M the magnitude and D the depth in KM
+    euler = 2.718
+    radius = 10 ** (0.43 * M) * math.exp(-0.005 * D)
+    # Bakun & Wentworth, 1997 - Bulletin of the Seismological Society of America
+    return radius
 
 
 def get_EQ_data(start, end):
@@ -31,6 +39,8 @@ def get_EQ_data(start, end):
             'date': datetime.datetime.fromtimestamp(data['properties']['time'] / 1000, datetime.UTC).strftime(
                 "%d-%m-%Y"),
             'title': data['properties']['title'],
+            'mag': data['properties']['mag'],
+            'felt_radius': round(felt_radius(data['properties']['mag'], data['geometry']['coordinates'][2]), 2),
         }
         for data in response_data['features']
     }
@@ -39,11 +49,6 @@ def get_EQ_data(start, end):
         return extracted_data
     else:
         return response.status_code
-
-
-retrieved_data = get_EQ_data(start_date, end_date)
-
-pprint.pprint(retrieved_data)  # Method to print dict nicely
 
 
 # 1.1 Save in JSON file --------------------------------------------------------
@@ -76,17 +81,9 @@ def export_data(data, option=1):
         df.to_xml("EQdata/data.xml", index=False, root_name="Earthquakes", row_name="Event")
 
 
-export_data(retrieved_data)
-
 # 2 Creating the Shapefile with Qgis --------------------------------------------------------
 
-import sys
-import os
-# QGIS_PREFIX_PATH = 'C:/Program Files/QGIS/apps/qgis-ltr'  # Adjust this for your installation
-# os.environ['QGIS_PREFIX_PATH'] = QGIS_PREFIX_PATH
-# sys.path.append(os.path.join(QGIS_PREFIX_PATH, 'python'))
-
-from qgis.core import QgsApplication, QgsProject, QgsVectorLayer
+from qgis.core import QgsApplication, QgsProject, QgsVectorLayer, QgsProcessingFeedback
 
 
 def Qgis_processing():
@@ -112,10 +109,22 @@ def Qgis_processing():
     vLayer = QgsVectorLayer(uri, "EQ_data", "delimitedtext")
     QgsProject.instance().addMapLayer(vLayer)
     print('Layers added --------------')
+
+    from qgis import processing  # https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/index.html
+
+    params = {
+        'INPUT': vLayer,
+        'DISTANCE': felt_radius,
+        'DISSOLVE': True,
+        'OUTPUT': "file:///C:/Users/billk/OneDrive/Documents/6 - Pycharm Projects/Earthquake_map/geodata/EQbuffer.shp",
+        'DYNAMIC': True  # Required to use field-based distance
+    }
+    feedback = QgsProcessingFeedback()  # Used to get processing feedback
+    processing.run("native:buffer", params, feedback=feedback)
+
+
     project.write('geodata/Processing_project.qgs')
 
-
-Qgis_processing()
 
 # 3 WEBAPP --------------------------------------------------------
 # app = Flask(__name__)
@@ -124,3 +133,11 @@ Qgis_processing()
 #     return "Hello,World!"
 # if __name__ == "__main__":
 #     app.run()
+
+
+# MAIN -------------------------------------------
+
+retrieved_data = get_EQ_data(start_date, end_date)  # Get data from API
+pprint.pprint(retrieved_data)  # Method to print dict nicely
+export_data(retrieved_data)  # Export to CSV
+Qgis_processing()  # Initiate QGIS and import data
