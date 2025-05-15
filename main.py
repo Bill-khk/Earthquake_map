@@ -3,6 +3,9 @@ import datetime
 import pprint
 import json
 import math
+import requests
+import pandas as pd
+
 
 # 1) Get the data from https://earthquake.usgs.gov/fdsnws/event/1/ - Submit on UDEMY
 # 1.1) Save in a JSON file to be able to work Offline
@@ -10,7 +13,6 @@ import math
 # TODO 3) Create a webserver that interact with the data and update the display
 
 # 1 API DATA --------------------------------------------------------
-import requests
 
 start_date = '2014-01-01'
 end_date = '2014-01-02'
@@ -63,9 +65,6 @@ def json_saving(data, filename):
 
 # 1.2 Save in CSV file --------------------------------------------------------
 
-import pandas as pd
-
-
 def export_data(data, option=1):
     df = pd.DataFrame.from_dict(data, orient='index')  # Index put each dict value as a row
     df = df.reset_index().rename(columns={'index': 'id'})  # And name the key 'id'
@@ -83,48 +82,62 @@ def export_data(data, option=1):
 
 # 2 Creating the Shapefile with Qgis --------------------------------------------------------
 
-from qgis.core import QgsApplication, QgsProject, QgsVectorLayer, QgsProcessingFeedback
+from qgis.core import (
+    QgsApplication, QgsProject, QgsVectorLayer, QgsProcessingFeedback
+)
+from qgis.analysis import QgsNativeAlgorithms
+import qgis.processing
+import processing  # ✅ This is enough to load the processing plugin
 
 
 def Qgis_processing():
-    # App initialization
-    QGIS_PATH = 'C:/Program Files/QGIS/bin'
-    QgsApplication.setPrefixPath(QGIS_PATH, True)
+    # QGIS prefix and init
+    QGIS_PREFIX_PATH = "C:/OSGeo4W/apps/qgis-ltr"
+    QgsApplication.setPrefixPath(QGIS_PREFIX_PATH, True)
     qgs = QgsApplication([], False)
     qgs.initQgis()
     print("QGIS Initialized --------------")
 
-    project = QgsProject.instance()  # App instance initialization
-    project.read('geodata/Base.qgz')  # Opening project
+    # ✅ Register the native algorithms ONLY
+    QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
 
-    # Loading countries shp file
+    project = QgsProject.instance()
+    project.read('geodata/Base.qgz')
+
+    # Load base layer
     uri = "geodata/ne_110m_admin_0_countries.shp"
     vLayer = QgsVectorLayer(uri, "Countries", "ogr")
     QgsProject.instance().addMapLayer(vLayer)
-    # project.write()
 
-    # TODO correct URI to make the layer valid in QGIS
+    # Load EQ CSV layer
     uri = ("file:///C:/Users/billk/OneDrive/Documents/6 - Pycharm Projects/Earthquake_map/EQdata/data.csv"
            "?delimiter=;&xField=longitude&yField=latitude")
-    vLayer = QgsVectorLayer(uri, "EQ_data", "delimitedtext")
-    QgsProject.instance().addMapLayer(vLayer)
+    eqLayer = QgsVectorLayer(uri, "EQ_data", "delimitedtext")
+    QgsProject.instance().addMapLayer(eqLayer)
     print('Layers added --------------')
 
-    from qgis import processing  # https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/index.html
-
+    # Buffer parameters
     params = {
-        'INPUT': vLayer,
-        'DISTANCE': felt_radius,
+        'INPUT': eqLayer,
+        'DISTANCE': 0,  # Must be present but ignored when DYNAMIC=True
+        'DISTANCE_FIELD_NAME': 'felt_radius',  # This tells QGIS to use the field
         'DISSOLVE': True,
-        'OUTPUT': "file:///C:/Users/billk/OneDrive/Documents/6 - Pycharm Projects/Earthquake_map/geodata/EQbuffer.shp",
-        'DYNAMIC': True  # Required to use field-based distance
+        'OUTPUT': "C:/Users/billk/OneDrive/Documents/6 - Pycharm Projects/Earthquake_map/geodata/layer_output/EQbuffer.shp",
+        'DYNAMIC': True
     }
-    feedback = QgsProcessingFeedback()  # Used to get processing feedback
-    processing.run("native:buffer", params, feedback=feedback)
 
+    feedback = QgsProcessingFeedback()
+    buffer_process = qgis.processing.run("native:buffer", params, feedback=feedback)
+    buffer_path = buffer_process['OUTPUT']
+    buffer_layer = QgsVectorLayer(buffer_path, "EQ_Buffer", "ogr")
+    if buffer_layer.isValid():
+        QgsProject.instance().addMapLayer(buffer_layer)
+        print("Buffer layer added and saved.")
+    else:
+        print("Buffer layer failed to load.")
 
     project.write('geodata/Processing_project.qgs')
-
+    qgs.exitQgis()
 
 # 3 WEBAPP --------------------------------------------------------
 # app = Flask(__name__)
