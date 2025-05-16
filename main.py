@@ -112,24 +112,24 @@ def Qgis_processing():
     # Load EQ CSV layer
     uri = ("file:///C:/Users/billk/OneDrive/Documents/6 - Pycharm Projects/Earthquake_map/EQdata/data.csv"
            "?delimiter=;&xField=longitude&yField=latitude")
-    eqLayer = QgsVectorLayer(uri, "EQ_data", "delimitedtext")
-    QgsProject.instance().addMapLayer(eqLayer)
+    eqLayer = QgsVectorLayer(uri, "EQ_data", "delimitedtext")  # Create the layer
+    eqLayer = QgsProject.instance().addMapLayer(eqLayer)  # Add the layer
     print('Layers added --------------')
 
     # Buffer parameters
     params = {
         'INPUT': eqLayer,
-        'DISTANCE': 0,  # Must be present but ignored when DYNAMIC=True
-        'DISTANCE_FIELD_NAME': 'felt_radius',  # This tells QGIS to use the field
-        'DISSOLVE': True,
+        'DISTANCE': 0,
+        'DYNAMIC': True,  # This enables field-based buffer distances
+        'DISTANCE_FIELD_NAME': 'felt_radius',
         'OUTPUT': "C:/Users/billk/OneDrive/Documents/6 - Pycharm Projects/Earthquake_map/geodata/layer_output/EQbuffer.shp",
-        'DYNAMIC': True
     }
 
     feedback = QgsProcessingFeedback()
     buffer_process = qgis.processing.run("native:buffer", params, feedback=feedback)
     buffer_path = buffer_process['OUTPUT']
     buffer_layer = QgsVectorLayer(buffer_path, "EQ_Buffer", "ogr")
+
     if buffer_layer.isValid():
         QgsProject.instance().addMapLayer(buffer_layer)
         print("Buffer layer added and saved.")
@@ -153,4 +153,5 @@ def Qgis_processing():
 retrieved_data = get_EQ_data(start_date, end_date)  # Get data from API
 pprint.pprint(retrieved_data)  # Method to print dict nicely
 export_data(retrieved_data)  # Export to CSV
-Qgis_processing()  # Initiate QGIS and import data
+#TODO Check the unit and projection of the imported DATA
+#Qgis_processing()  # Initiate QGIS and import data
