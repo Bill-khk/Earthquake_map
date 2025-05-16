@@ -20,7 +20,7 @@ end_date = '2014-01-02'
 
 def felt_radius(M, D):  # With M the magnitude and D the depth in KM
     euler = 2.718
-    radius = 10 ** (0.43 * M) * math.exp(-0.005 * D)
+    radius = 10 ** (0.43 * M) * math.exp(-0.005 * D) # TODO Are the unit correct ? Check with the projection
     # Bakun & Wentworth, 1997 - Bulletin of the Seismological Society of America
     return radius
 
